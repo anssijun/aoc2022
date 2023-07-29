@@ -3,7 +3,7 @@ import re
 from collections import defaultdict, deque
 
 
-if __name__ == '__main__':
+def top_crates(part2=False):
     # Stacks is a dict of deques (could be list of deques but this is easier to build when reading through input)
     # Deques are used because you can appendleft, so it's more natural from building the stack top to bottom
     stacks = defaultdict(deque)
@@ -26,8 +26,15 @@ if __name__ == '__main__':
                 crates = []
                 for i in range(count):
                     crates.append(stacks[source].pop())
-                stacks[target].extend(crates)
+                # We need to reverse the order of moving crates for part 2 as multiple are moved at a time
+                order = -1 if part2 else 1
+                stacks[target].extend(crates[::order])
 
     for i in sorted(stacks.keys()):
         print(stacks[i][-1], end='')
     print()
+
+
+if __name__ == '__main__':
+    top_crates()
+    top_crates(True)
