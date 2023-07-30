@@ -2,7 +2,7 @@
 from collections import deque
 
 
-def unique_string_end_idx(length):
+def unique_seq_end_idx(length):
     counter = 0
     buffer = deque()
     with open('inputs/day6') as f:
@@ -19,5 +19,5 @@ def unique_string_end_idx(length):
 
 
 if __name__ == '__main__':
-    print(unique_string_end_idx(4))
-    print(unique_string_end_idx(14))
+    print(unique_seq_end_idx(4))
+    print(unique_seq_end_idx(14))
