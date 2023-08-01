@@ -3,6 +3,8 @@ from collections import defaultdict
 
 
 if __name__ == '__main__':
+    total_size_limit = 70000000
+    space_needed = 30000000
     size_limit = 100000
     sizes = defaultdict(int)
     # We know the root is /
@@ -37,16 +39,25 @@ if __name__ == '__main__':
             else:
                 size, file_name = line.split()
                 current_dir = dirs
-                whole_path = ''
+                current_path = ''
                 for p in path:
                     current_dir = current_dir[p]
                     # Keep a track of file sizes in path
-                    whole_path += f'{p}/'
-                    sizes[whole_path[1:]] += int(size)
+                    current_path += f'{p}/'
+                    sizes[current_path[1:]] += int(size)
                 current_dir[file_name] = int(size)
 
+    # Total space used
+    space_used = sizes.get('/')
+    smallest_folder_to_delete = space_used
     total_size = 0
     for val in sizes.values():
+        # Calculate cumulative sizes for part 1
         if val <= size_limit:
             total_size += val
-    print(total_size)
+        # Calculate smallest folder to be deleted for part 2
+        if total_size_limit - space_used + val > space_needed and val < smallest_folder_to_delete:
+            smallest_folder_to_delete = val
+
+    print('Cumulative size of folders under size limit', total_size)
+    print('Smallest folder size to delete', smallest_folder_to_delete)
