@@ -3,11 +3,24 @@ import operator
 from functools import reduce
 
 
+def calculate_visibility(height, current_index, tallness_index):
+    closest = current_index
+    for i in range(height, 10):
+        if -1 < tallness_index[i]:
+            distance = current_index - tallness_index[i]
+            if closest > distance:
+                closest = distance
+    return closest
+
+
 def count_visible_trees(trees, reverse=False):
     trees_visible = 0
     highest_scenic_score = 0
     # Keep the tallest tree for each column in a list as we iterate over rows
     tallest_from_up = [-1] * len(trees[0])
+    tallness_indexes_up = []
+    for i in range(len(trees[0])):
+        tallness_indexes_up.append({i: -1 for i in range(10)})
 
     left_score_idx, up_score_idx = 0, 1
     # Going through the array in reverse order could be done a bit of efficiently using range from end to start
@@ -18,6 +31,7 @@ def count_visible_trees(trees, reverse=False):
         if reverse:
             row.reverse()
         tallest_from_left = -1
+        tallness_index_left = {i: -1 for i in range(10)}
         for col_idx, tree in enumerate(row):
             # Check if the tallest tree to the left or to the up is shorter than the current one - if so, it's
             # visible
@@ -25,28 +39,22 @@ def count_visible_trees(trees, reverse=False):
             if tree[0] > tallest_from_up[col_idx]:
                 tallest_from_up[col_idx] = tree[0]
                 visible = True
-            # Calculate how much up you can see from the tree. This is pretty bad for performance as in worst case
-            # you might have to go all the way up each iteration - but not sure if it's possible to implement this
-            # otherwise (at least if we want to keep the calculation in the same algorithm as part 1. Probably possible
-            # with some dict magic but seems like a pain to implement)
-            for i in range(row_idx-1, -1, -1):
-                tree[2][up_score_idx] += 1
-                if trees[i][col_idx][0] >= tree[0]:
-                    break
+            # Calculate how much up you can see from the tree by checking how far the closest tree that's as tall or
+            # taller than the current one is. As the max three height is 9, this is probably OK performance
+            tree[2][up_score_idx] = calculate_visibility(tree[0], row_idx, tallness_indexes_up[col_idx])
 
             if tree[0] > tallest_from_left:
                 tallest_from_left = tree[0]
                 visible = True
-            for i in range(col_idx-1, -1, -1):
-                tree[2][left_score_idx] += 1
-                if trees[row_idx][i][0] >= tree[0]:
-                    break
+            tree[2][left_score_idx] = calculate_visibility(tree[0], col_idx, tallness_index_left)
 
             # Count only if tree is visible and hasn't been counted yet
             if visible and not tree[1]:
                 trees_visible += 1
                 tree[1] = True
 
+            tallness_indexes_up[col_idx][tree[0]] = row_idx
+            tallness_index_left[tree[0]] = col_idx
             # Calculate the scenic score for each direction
             scenic_score = int(reduce(operator.mul, tree[2]))
             highest_scenic_score = max(highest_scenic_score, scenic_score)
