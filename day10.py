@@ -1,3 +1,6 @@
+# https://adventofcode.com/2022/day/10
+
+
 def calc_signal_strengths(cmds):
     reg_x = 1
     cycle = 0
@@ -5,7 +8,15 @@ def calc_signal_strengths(cmds):
     cmd_idx = 0
     signal_strengths = []
     pending_incr = None
+    crt = [[], [], [], [], [], []]  # This could really be built dynamically
     while True:
+        # Draw CRT at the start of each cycle
+        # Determine the row to draw on (each row is 40 cycles)
+        row = cycle // 40
+        # Determine whether the cycle's pixel will be lit of dark by checking whether the sprite (reg_x) covers current
+        # cycle
+        crt[row].append('#' if abs((reg_x + row * 40) - cycle) < 2 else '.')
+
         # Increment cycle and add value to register (has to be at the start of the cycle)
         cycle += 1
         signal_strengths.append(reg_x)
@@ -30,13 +41,13 @@ def calc_signal_strengths(cmds):
         if cmd_idx == len(cmds) and cycle == cycles_to_run:
             break
 
-    return signal_strengths
+    return signal_strengths, crt
 
 
 if __name__ == '__main__':
     with open('inputs/day10') as f:
         cmds = f.readlines()
-    signal_strengths = calc_signal_strengths(cmds)
+    signal_strengths, crt = calc_signal_strengths(cmds)
 
     total_signal_strength = 20 * signal_strengths[19]
     interesting_cycles = (len(signal_strengths) - 20) // 40
@@ -44,3 +55,5 @@ if __name__ == '__main__':
         total_signal_strength += (i * 40 + 20) * signal_strengths[i * 40 + 19]
 
     print(total_signal_strength)
+    for i in crt:
+        print(''.join(i))
