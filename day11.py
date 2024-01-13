@@ -1,19 +1,23 @@
 # https://adventofcode.com/2022/day/11
+import copy
+import math
+import operator
 import re
 
 
-def simulate_monkeys(monkeys):
+def simulate_monkeys(monkeys, rounds, inspection_stress_factor, op):
     # Simulate monkeys for 20 rounds
-    for _ in range(20):
+    for r in range(rounds):
         for monkey in monkeys:
             for item in monkey['items']:
                 monkey['handled_items'] += 1
                 # Using eval isn't great, but way easier than parsing the formula manually...
-                new_stress_level = int(eval(monkey['operation'].replace('old', str(item))) / 3)
+                new_stress_level = op(eval(monkey['operation'].replace('old', str(item))), inspection_stress_factor)
                 # Throw the item to the correct monkey
                 monkeys[monkey['false' if new_stress_level % monkey['test'] else 'true']]['items'].append(new_stress_level)
             # Monkey has thrown all their items away, so they don't have any left
             monkey['items'] = []
+    return monkeys
 
 
 if __name__ == '__main__':
@@ -38,6 +42,17 @@ if __name__ == '__main__':
         elif line.startswith('If false'):
             monkeys[-1]['false'] = int(re.search(r'\d+', line).group())
 
-    simulate_monkeys(monkeys)
-    sorted_monkey = sorted(monkeys, key=lambda x: x['handled_items'], reverse=True)
-    print(sorted_monkey[0]['handled_items'] * sorted_monkey[1]['handled_items'])
+    first_monkeys = simulate_monkeys(copy.deepcopy(monkeys), 20, 3, operator.floordiv)
+    sorted_monkeys = sorted(first_monkeys, key=lambda x: x['handled_items'], reverse=True)
+    print(sorted_monkeys[0]['handled_items'] * sorted_monkeys[1]['handled_items'])
+
+    # The new way to reduce stress is product of the integers in test section, and using modulo operator
+    # Had to look this up
+    second_monkeys = simulate_monkeys(
+        copy.deepcopy(monkeys),
+        10000,
+        math.prod(monkey['test'] for monkey in monkeys),
+        operator.mod
+    )
+    sorted_monkeys = sorted(second_monkeys, key=lambda x: x['handled_items'], reverse=True)
+    print(sorted_monkeys[0]['handled_items'] * sorted_monkeys[1]['handled_items'])
