@@ -1,11 +1,11 @@
 import re
 
 
-def calculate_row_coverage(sensors: dict[tuple[int, int], int], row: int) -> int:
+def get_row_coverage(sensors: dict[tuple[int, int], int], row: int, min_x: int = None, max_x: int = None) -> list[tuple[int, int]]:
     # Calculate a given row's coverage using given a dict of sensors and their radiuses. For each sensor, we can calculate
     # the 'start' and 'end' positions of the sensor's coverage by comparing its y-coordinate to the row, and using
     # Manhattan distance to calculate the 'width' of the coverage. Finally, we merge the sensor's coverage with other sensors'
-    # coverage as we go and calculate the row's total coverage at the end.
+    # coverage as we go.
     coverages = []
     for sensor, radius in sensors.items():
         distance = abs(sensor[1] - row)
@@ -17,6 +17,12 @@ def calculate_row_coverage(sensors: dict[tuple[int, int], int], row: int) -> int
         coverage_width = abs(radius - distance) * 2 + 1
         coverage_start = sensor[0] - int(coverage_width / 2)
         coverage_end = sensor[0] + int(coverage_width / 2)
+
+        # If there are min or max bound, we're only interested in those
+        if min_x is not None:
+            coverage_start = max(coverage_start, min_x)
+        if max_x is not None:
+            coverage_end = min(coverage_end, max_x)
 
         # We must see if there's overlap in the existing coverage for every new sensor, and, if needed, merge the coverages
         new_coverages = []
@@ -37,10 +43,14 @@ def calculate_row_coverage(sensors: dict[tuple[int, int], int], row: int) -> int
         new_coverages.append((coverage_start, coverage_end))
         coverages = new_coverages
 
-    return calculate_total_coverage(coverages)
+        # If the entire search area is already covered, just bail out
+        if coverage_start == min_x and coverage_end == max_x:
+            break
+
+    return coverages
 
 
-def calculate_total_coverage(coverage: list[tuple[int, int]]) -> int:
+def calculate_row_total_coverage(coverage: list[tuple[int, int]]) -> int:
     # Calculate the total number of covered positions given a list of coverage start and end positions
     return sum([c[1] - c[0] for c in coverage])
 
@@ -79,9 +89,20 @@ def main():
     sensors, beacons = parse_input('inputs/day15')
     sensor_radiuses = calculate_sensor_radiuses(sensors, beacons)
     row = 2000000
-    row_coverage = calculate_row_coverage(sensor_radiuses, row)
+    coverages = get_row_coverage(sensor_radiuses, row)
+    row_coverage = calculate_row_total_coverage(coverages)
     print(f'Distress beacon can\'t be on {row_coverage} positions on row {row}')
+    print()
 
+    # For part two, just brute force the search for each row. This is very slow - a much smarter solution probably exists
+    for row in range(4000000):
+        coverages = get_row_coverage(sensor_radiuses, row, 0, 4000000)
+        total_row_coverage = calculate_row_total_coverage(coverages)
+        if total_row_coverage < 4000000:
+            coverages.sort()
+            x = 0 if coverages[0][0] == 1 else coverages[0][1] + 1
+            print(f'The tuning frequency is {4000000 * x + row}')
+            break
 
 if __name__ == '__main__':
     main()
