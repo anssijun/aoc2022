@@ -1,3 +1,5 @@
+# https://adventofcode.com/2022/day/16
+
 import re
 from collections import deque
 from functools import cache
