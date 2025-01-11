@@ -1,15 +1,21 @@
 # https://adventofcode.com/2022/day/17
-
+from copy import deepcopy
 from itertools import cycle
 from operator import itemgetter
 
 
-def simulate_rocks(cavern: list[list[list[int]]], rocks: list[list[list[int | None]]], jet_pattern, max_rocks: int) -> list[list[list[int]]]:
+def simulate_rocks(cavern: list[list[list[int]]], rocks: list[list[list[int | None]]], jet_pattern: str, max_rocks: int) -> int:
     # Simulate the falling rocks. The cavern is 7 unit wide, and each vertical space is represented by ranges of solid rock,
     # where we store each range's start and end coordinates. As the rocks keep falling down, we add them to the cavern's
     # representation once they've fallen onto the floor or another rock.
+    cavern_orig = deepcopy(cavern)
+    cavern = deepcopy(cavern)
+    jet_pattern_orig = jet_pattern
     current_rock = 0
-    for rock in cycle(rocks):  # Cycle through rocks until we break out manually
+    jet_pattern = cycle(enumerate(jet_pattern_orig))
+    highest_rock_cache = {}
+
+    for rock_idx, rock in cycle(enumerate(rocks)):  # Cycle through rocks until we break out manually
         current_rock += 1
         if current_rock > max_rocks:
             break
@@ -24,7 +30,7 @@ def simulate_rocks(cavern: list[list[list[int]]], rocks: list[list[list[int | No
 
         # Move the rock until it falls down. First it gets moved one spot by a jet of gas, after which it falls down one spot
         while True:
-            jet_pattern_direction = next(jet_pattern)
+            jet_idx, jet_pattern_direction = next(jet_pattern)
             rock_coords, _ = move_rock(rock_coords, cavern, jet_pattern_direction)
             rock_coords, moved = move_rock(rock_coords, cavern, 'down')
             if not moved:
@@ -40,10 +46,26 @@ def simulate_rocks(cavern: list[list[list[int]]], rocks: list[list[list[int | No
             cavern[idx] = sorted(cavern[idx], key=itemgetter(1))
             cavern[idx] = merge_rocks(cavern[idx])
 
-        cavern = raise_floor(cavern)
-        # print(cavern)
+        # Try to detect if there's a cycle, and if so, use that to deduce the correct answer (we need to simulate at least
+        # one round of the jet pattern before checking for the cycle, as we start with a flat floor)
+        cache_key = (rock_idx, jet_idx)
+        new_highest_rock = get_highest_rock(cavern)
+        cached = highest_rock_cache.get(cache_key)
+        if current_rock > len(jet_pattern_orig) and cached:
+            # If we've detected a cycle, calculate the answer by first multiplying each cycle's tallness-gain by how many
+            # cycles fit in max_rocks, and then adding the result for the remainder by calling this function again
+            old_highest_rock, old_rock = cached
+            cycle_length = current_rock - old_rock
+            return (max_rocks // cycle_length *
+                    (new_highest_rock - old_highest_rock) +
+                    simulate_rocks(cavern_orig, rocks, jet_pattern_orig, max_rocks % cycle_length))
+        else:
+            highest_rock_cache[cache_key] = new_highest_rock, current_rock
 
-    return cavern
+        # Merge any unreachable rock ranges together
+        cavern = raise_floor(cavern)
+
+    return get_highest_rock(cavern)
 
 
 def move_rock(rock: list[list[int | None]], cavern: list[list[list[int]]], direction: str) -> tuple[list[list[int | None]], bool]:
@@ -66,7 +88,7 @@ def move_rock(rock: list[list[int | None]], cavern: list[list[list[int]]], direc
 
 
 def overlap(rock: list[list[int | None]], cavern: list[list[list[int]]]) -> bool:
-    # Do teh rock coordinates overlap with any other rock coordinates in the cavern
+    # Do the rock coordinates overlap with any other rock coordinates in the cavern
     for idx, coords in enumerate(rock):
         if not isinstance(coords[0], int):
             continue
@@ -136,7 +158,7 @@ def parse_input(filename: str) -> str:
 
 
 def main():
-    jet_pattern = cycle(parse_input('inputs/day17'))
+    jet_pattern = parse_input('inputs/day17')
     cavern = [[[0, 0]] for _ in range(7)]
     # Representation of rocks, where each list the number of spaces the rock takes up vertically.
     # (These probably could've been done using ranges as we deal with ranges elsewhere as well?)
@@ -148,8 +170,8 @@ def main():
         [[1, 1], [1, 1]]
     ]
 
-    cavern = simulate_rocks(cavern, rocks, jet_pattern, max_rocks=2022)
-    print(get_highest_rock(cavern))
+    print(simulate_rocks(cavern, rocks, jet_pattern, max_rocks=2022))
+    print(simulate_rocks(cavern, rocks, jet_pattern, max_rocks=1000000000000))
 
 
 if __name__ == '__main__':
